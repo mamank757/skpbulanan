@@ -596,7 +596,7 @@
             return;
         }
 
-        const webAppUrl = "https://script.google.com/macros/s/AKfycbzJvqZDgJECmjssnkonsHfFoz1oDyMC75rhRym05GaNVPuE0lZEybUT4fqitmiMEZDN/exec"; 
+        const webAppUrl = "https://script.google.com/macros/s/AKfycbzMlyDcOSThl2NR5rRVMNhCTz3p9okiVVYQI3-vuvMEdwJu7cnrV52NMhUXvamIIOy_/exec"; 
         const btn = document.getElementById('btn-ai');
         let sel = [];
         
@@ -714,38 +714,52 @@ try {
     
     const result = await response.json();
 
-    // PENYESUAIAN DI SINI:
-    // Karena Apps Script yang saya berikan mengembalikan {status: "success", text: "..."},
-    // maka kita ambil result.text langsung.
-    if (result.status !== "success") throw new Error(result.message || "Gagal generate AI");
+    // Verifikasi apakah Apps Script berhasil memberikan respon
+    if (result.status !== "success") {
+        throw new Error(result.message || "Gagal generate AI");
+    }
 
     let rawContent = result.text;
-    
-    // Membersihkan markdown jika AI tetap menyertakannya
-    rawContent = rawContent.replace(/```json/g, "").replace(/```/g, "").trim();
-    
-    const obj = JSON.parse(rawContent);
 
-    // Menampilkan ke UI
-    document.getElementById('out_kp').innerHTML = obj.kp.replace(/\n/g, '<br>');
-    document.getElementById('out_latar').innerHTML = obj.latar.replace(/\n/g, '<br>');
-    document.getElementById('out_tugas_pokok').innerHTML = obj.tugas.replace(/\n/g, '<br>');
-    document.getElementById('out_tujuan').innerHTML = obj.tujuan.replace(/\n/g, '<br>');
-    document.getElementById('out_kesimp').innerHTML = obj.kesimp.replace(/\n/g, '<br>');
+    // 1. MEMBERSIHKAN TEKS (Menghapus Markdown ```json jika ada)
+    rawContent = rawContent.replace(/
+```json/g, "").replace(/```/g, "").trim();
 
-    // Iterasi item kegiatan
-    obj.items.forEach(item => {
-        const rCell = document.getElementById(`r_${item.no}`);
-        const orig = sel.find(s => s.no == item.no);
-        if(rCell) {
-            // Gabungkan rincian dari AI dengan link eviden dari input user
-            rCell.innerHTML = `<div><b>${item.rincian}</b></div>${orig.link ? `<div style="font-size:7pt; color:blue;">Eviden: ${orig.link}</div>` : ""}`;
-            
-            // Prioritaskan kendala dari user, jika kosong pakai dari AI
-            document.getElementById(`k_${item.no}`).innerText = orig.user_kendala || item.kendala;
-            document.getElementById(`t_${item.no}`).innerText = item.tindak;
-        }
-    });
+    // 2. PARSING JSON DENGAN PENANGANAN ERROR
+    let obj;
+    try {
+        obj = JSON.parse(rawContent);
+    } catch (parseError) {
+        console.error("JSON Rusak:", rawContent);
+        throw new Error("Format laporan dari AI tidak sempurna (teks terputus), silakan klik Generate ulang.");
+    }
+
+    // 3. MENAMPILKAN DATA KE UI (Objek 'obj' sudah aman digunakan di sini)
+    document.getElementById('out_kp').innerHTML = (obj.kp || "").replace(/\n/g, '<br>');
+    document.getElementById('out_latar').innerHTML = (obj.latar || "").replace(/\n/g, '<br>');
+    document.getElementById('out_tugas_pokok').innerHTML = (obj.tugas || "").replace(/\n/g, '<br>');
+    document.getElementById('out_tujuan').innerHTML = (obj.tujuan || "").replace(/\n/g, '<br>');
+    document.getElementById('out_kesimp').innerHTML = (obj.kesimp || "").replace(/\n/g, '<br>');
+
+    // 4. ITERASI ITEM KEGIATAN
+    if (obj.items && Array.isArray(obj.items)) {
+        obj.items.forEach(item => {
+            const rCell = document.getElementById(`r_${item.no}`);
+            const orig = sel.find(s => s.no == item.no);
+            if (rCell && orig) {
+                // Rincian kegiatan dari AI + Link Eviden user
+                rCell.innerHTML = `<div><b>${item.rincian}</b></div>${orig.link ? `<div style="font-size:7pt; color:blue;">Eviden: ${orig.link}</div>` : ""}`;
+                
+                // Kendala: pakai input user jika ada, jika tidak pakai dari AI
+                const kendalaCell = document.getElementById(`k_${item.no}`);
+                if(kendalaCell) kendalaCell.innerText = orig.user_kendala || item.kendala || "-";
+                
+                // Tindak lanjut dari AI
+                const tindakCell = document.getElementById(`t_${item.no}`);
+                if(tindakCell) tindakCell.innerText = item.tindak || "-";
+            }
+        });
+    }
 
     document.querySelectorAll('.italic.text-gray-400').forEach(el => el.classList.remove('italic', 'text-gray-400'));
     alert("✅ Laporan Berhasil Disusun!");
