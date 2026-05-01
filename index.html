@@ -714,61 +714,71 @@ try {
     
     const result = await response.json();
 
-    // Verifikasi apakah Apps Script berhasil memberikan respon
+    // Verifikasi status dari Apps Script
     if (result.status !== "success") {
         throw new Error(result.message || "Gagal generate AI");
     }
 
     let rawContent = result.text;
 
-    // 1. MEMBERSIHKAN TEKS (Menghapus Markdown ```json jika ada)
-    rawContent = rawContent.replace(/
-```json/g, "").replace(/```/g, "").trim();
+    // 1. MEMBERSIHKAN TEKS (Regex diperbaiki agar dalam satu baris)
+    rawContent = rawContent.replace(/```json/g, "").replace(/```/g, "").trim();
 
-    // 2. PARSING JSON DENGAN PENANGANAN ERROR
+    // 2. PARSING JSON
     let obj;
     try {
         obj = JSON.parse(rawContent);
     } catch (parseError) {
         console.error("JSON Rusak:", rawContent);
-        throw new Error("Format laporan dari AI tidak sempurna (teks terputus), silakan klik Generate ulang.");
+        throw new Error("Format laporan dari AI terputus. Silakan klik Generate ulang.");
     }
 
-    // 3. MENAMPILKAN DATA KE UI (Objek 'obj' sudah aman digunakan di sini)
-    document.getElementById('out_kp').innerHTML = (obj.kp || "").replace(/\n/g, '<br>');
-    document.getElementById('out_latar').innerHTML = (obj.latar || "").replace(/\n/g, '<br>');
-    document.getElementById('out_tugas_pokok').innerHTML = (obj.tugas || "").replace(/\n/g, '<br>');
-    document.getElementById('out_tujuan').innerHTML = (obj.tujuan || "").replace(/\n/g, '<br>');
-    document.getElementById('out_kesimp').innerHTML = (obj.kesimp || "").replace(/\n/g, '<br>');
+    // 3. MENAMPILKAN DATA KE UI
+    // Pastikan ID elemen ini (out_kp, dll) memang ada di HTML Anda
+    const fields = ['kp', 'latar', 'tugas', 'tujuan', 'kesimp'];
+    const ids = ['out_kp', 'out_latar', 'out_tugas_pokok', 'out_tujuan', 'out_kesimp'];
+    
+    ids.forEach((id, index) => {
+        const el = document.getElementById(id);
+        if (el) {
+            const content = obj[fields[index]] || "";
+            el.innerHTML = content.replace(/\n/g, '<br>');
+        }
+    });
 
     // 4. ITERASI ITEM KEGIATAN
     if (obj.items && Array.isArray(obj.items)) {
         obj.items.forEach(item => {
             const rCell = document.getElementById(`r_${item.no}`);
             const orig = sel.find(s => s.no == item.no);
+            
             if (rCell && orig) {
-                // Rincian kegiatan dari AI + Link Eviden user
                 rCell.innerHTML = `<div><b>${item.rincian}</b></div>${orig.link ? `<div style="font-size:7pt; color:blue;">Eviden: ${orig.link}</div>` : ""}`;
                 
-                // Kendala: pakai input user jika ada, jika tidak pakai dari AI
                 const kendalaCell = document.getElementById(`k_${item.no}`);
                 if(kendalaCell) kendalaCell.innerText = orig.user_kendala || item.kendala || "-";
                 
-                // Tindak lanjut dari AI
                 const tindakCell = document.getElementById(`t_${item.no}`);
                 if(tindakCell) tindakCell.innerText = item.tindak || "-";
             }
         });
     }
 
+    // Menghilangkan indikator loading manual jika ada
     document.querySelectorAll('.italic.text-gray-400').forEach(el => el.classList.remove('italic', 'text-gray-400'));
+    
+    // Alert ini akan muncul SETELAH UI terupdate
     alert("✅ Laporan Berhasil Disusun!");
-    setTimeout(applySmartBreak, 800);
+    
+    if (typeof applySmartBreak === "function") {
+        setTimeout(applySmartBreak, 800);
+    }
 
 } catch (e) { 
-    console.error(e);
+    console.error("Detail Error:", e);
     alert("Kesalahan: " + e.message); 
 } finally { 
+    // Bagian ini WAJIB ada agar tombol kembali normal meskipun terjadi error
     btn.innerHTML = "🚀 GENERATE NARASI LAPORAN"; 
     btn.disabled = false; 
 }
