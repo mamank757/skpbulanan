@@ -74,11 +74,6 @@
     text-align: center;
 }
 
-/* Sembunyikan koordinator secara default */
-#area-koordinator {
-    display: none; 
-}
-
   /* Container dibuat relative agar posisi absolute gambar mengacu ke sini */
 .sig-container { 
     display: inline-block; 
@@ -310,7 +305,7 @@
         <div class="page-number">ii</div>
     </div>
 
-    <div class="page">
+    <div class="page auto-height" id="bab1">
         <h2 class="font-bold text-lg mb-6 uppercase text-center">BAB I. PENDAHULUAN</h2>
         <h3 class="font-bold mb-2">1.1. Latar Belakang</h3>
         <div id="out_latar" class="text-justify mb-6 italic text-gray-400">Menunggu AI...</div>
@@ -421,7 +416,9 @@
         const inputDetail = document.getElementById('input-koor-detail');
         const btn = document.getElementById('btn-koor');
         
-        if (areaKoor.style.display === 'block') {
+        const isVisible = window.getComputedStyle(areaKoor).display === 'block';
+
+if (isVisible) {
             areaKoor.style.display = 'none';
             inputDetail.classList.add('hidden');
             btn.innerHTML = '<i class="fa-solid fa-eye-slash mr-1"></i> Tampilkan Koordinator';
@@ -444,36 +441,97 @@
         }
     }
 
-    function sync() {
-        const val = (id) => document.getElementById(id).value;
-        
-        // Sync Data Utama
-        document.getElementById('out_nama_cover').innerText = val('in_nama') || '-';
-        document.getElementById('out_nip_cover').innerText = val('in_nip') || '-';
-        document.getElementById('out_wkpp_cover').innerText = val('in_wkpp') || '-';
-        document.getElementById('out_bpp_cover').innerText = val('in_bpp') || '-';
-        document.getElementById('out_bulan_cover').innerText = "BULAN " + val('in_bulan');
-        document.getElementById('out_bulan_2').innerText = val('in_bulan');
-        document.getElementById('out_jabatan_cover').innerText = val('in_jabatan') || 'PENYULUH PERTANIAN';
+   function sync() {
+    const val = (id) => document.getElementById(id).value;
 
-        // Sync Tanda Tangan
-        document.getElementById('out_nama_sig1').innerText = val('in_nama') || '';
-        document.getElementById('out_nama_sig2').innerText = val('in_nama') || '';
-        document.getElementById('out_nip_sig2').innerText = val('in_nip') || '-';
+    // Sync tampilan
+    document.getElementById('out_nama_cover').innerText = val('in_nama') || '-';
+    document.getElementById('out_nip_cover').innerText = val('in_nip') || '-';
+    document.getElementById('out_wkpp_cover').innerText = val('in_wkpp') || '-';
+    document.getElementById('out_bpp_cover').innerText = val('in_bpp') || '-';
+    document.getElementById('out_bulan_cover').innerText = "BULAN " + val('in_bulan');
+    document.getElementById('out_bulan_2').innerText = val('in_bulan');
+    document.getElementById('out_jabatan_cover').innerText = val('in_jabatan') || 'PENYULUH PERTANIAN';
 
-        // Sync Koordinator
-        document.getElementById('out_nama_koor').innerText = val('in_nama_koor') || 'NAMA KOORDINATOR';
-        document.getElementById('out_nip_koor').innerText = val('in_nip_koor') || '-';
+    document.getElementById('out_nama_sig1').innerText = val('in_nama') || '';
+    document.getElementById('out_nama_sig2').innerText = val('in_nama') || '';
+    document.getElementById('out_nip_sig2').innerText = val('in_nip') || '-';
 
-        // Lokasi & Tanggal
-        const tgl = formatTanggalIndo(val('in_tanggal'));
-        const lok = val('in_bpp') || '...';
-        document.getElementById('out_lokasi_tgl1').innerText = `${lok}, ${tgl}`;
-        document.getElementById('out_lokasi_tgl2').innerText = `${lok}, ${tgl}`;
-        
-        validasiNipRealtime(); // Jalankan validasi setiap sync
-    }
+    document.getElementById('out_nama_koor').innerText = val('in_nama_koor') || 'NAMA KOORDINATOR';
+    document.getElementById('out_nip_koor').innerText = val('in_nip_koor') || '-';
 
+    const tgl = formatTanggalIndo(val('in_tanggal'));
+    const lok = val('in_bpp') || '...';
+    document.getElementById('out_lokasi_tgl1').innerText = `${lok}, ${tgl}`;
+    document.getElementById('out_lokasi_tgl2').innerText = `${lok}, ${tgl}`;
+
+    validasiNipRealtime();
+
+    // ✅ SIMPAN KE LOCAL STORAGE (INI YANG DIPINDAH)
+    localStorage.setItem("formData", JSON.stringify({
+        nama: val('in_nama'),
+        nip: val('in_nip'),
+        jabatan: val('in_jabatan'),
+        wkpp: val('in_wkpp'),
+        kab: val('in_kab'),
+        bpp: val('in_bpp'),
+        bulan: val('in_bulan'),
+        tanggal: val('in_tanggal'),
+        nama_koor: val('in_nama_koor'),
+        nip_koor: val('in_nip_koor')
+    }));
+}
+   function splitBab1() {
+    document.querySelectorAll('.page-extra').forEach(p => p.remove());
+
+    const container = document.querySelector('.report-container');
+    const bab1 = document.getElementById('bab1');
+    if (!bab1) return;
+
+    const elements = Array.from(bab1.children).filter(el => !el.classList.contains('page-number'));
+
+    const maxHeightPerPage = bab1.clientHeight - 120;
+    let currentHeight = 0;
+    let pageCount = 1;
+
+    let currentPage = bab1;
+    let wrapper = document.createElement('div');
+
+   
+    bab1.insertBefore(wrapper, bab1.querySelector('.page-number'));
+
+    Array.from(wrapper.children).forEach(el => {
+        currentHeight += el.offsetHeight;
+
+        // 🔴 BATASI MAKS 2 HALAMAN
+        if (currentHeight > maxHeightPerPage && pageCount < 2) {
+
+            pageCount++;
+
+            const newPage = document.createElement('div');
+            newPage.className = "page auto-height page-extra";
+
+            const newWrapper = document.createElement('div');
+
+            newPage.innerHTML = `
+                <h2 class="font-bold text-lg mb-6 uppercase text-center">
+                    BAB I. PENDAHULUAN (Lanjutan)
+                </h2>
+                <div class="page-number">1</div>
+            `;
+
+            newPage.insertBefore(newWrapper, newPage.querySelector('.page-number'));
+            container.insertBefore(newPage, bab1.nextSibling);
+
+            currentPage = newPage;
+            wrapper = newWrapper;
+            currentHeight = el.offsetHeight;
+        }
+
+        wrapper.appendChild(el);
+    });
+}
+    
     function applySmartBreak() {
         const container = document.querySelector('.report-container');
         const tableBody = document.getElementById('out_table_body');
@@ -482,7 +540,7 @@
         
         document.querySelectorAll('.page-extra').forEach(p => p.remove());
 
-        const maxHeight = 950;
+        const maxHeight = page2.clientHeight - 100;
         let currentHeight = 0;
         let currentTableBody = tableBody;
 
@@ -514,26 +572,50 @@
     }
 
     function init() {
-        const cont = document.getElementById('input_container');
-        cont.innerHTML = "";
-        daftarKomponen.forEach((k, i) => {
-            const no = i + 1;
-            cont.innerHTML += `
-                <div class="input-card" id="card_${no}">
-                    <div class="flex items-start gap-3 mb-2">
-                        <input type="checkbox" id="chk_${no}" onchange="toggle(${no})" class="w-5 h-5 mt-1">
-                        <label for="chk_${no}" class="font-bold text-sm text-slate-200 cursor-pointer">${no}. ${k}</label>
-                    </div>
-                    <div id="box_${no}" class="hidden-input space-y-2">
-                        <textarea id="key_${no}" placeholder="Detail aktivitas..."></textarea>
-                        <textarea id="ken_${no}" placeholder="Tulis kendala..." class="bg-red-900/20 border-red-500/50"></textarea>
-                        <input type="text" id="ev_${no}" class="text-xs" placeholder="Link G-Drive Eviden">
-                    </div>
-                </div>`;
-        });
-        document.getElementById('in_tanggal').value = new Date().toISOString().split('T')[0];
-        sync();
+    const cont = document.getElementById('input_container');
+    cont.innerHTML = "";
+
+    daftarKomponen.forEach((k, i) => {
+        const no = i + 1;
+        cont.innerHTML += `
+            <div class="input-card" id="card_${no}">
+                <div class="flex items-start gap-3 mb-2">
+                    <input type="checkbox" id="chk_${no}" onchange="toggle(${no})" class="w-5 h-5 mt-1">
+                    <label for="chk_${no}" class="font-bold text-sm text-slate-200 cursor-pointer">${no}. ${k}</label>
+                </div>
+                <div id="box_${no}" class="hidden-input space-y-2">
+                    <textarea id="key_${no}" placeholder="Detail aktivitas..."></textarea>
+                    <textarea id="ken_${no}" placeholder="Tulis kendala..." class="bg-red-900/20 border-red-500/50"></textarea>
+                    <input type="text" id="ev_${no}" class="text-xs" placeholder="Link G-Drive Eviden">
+                </div>
+            </div>`;
+    });
+
+    // ✅ LOAD DATA
+    const saved = localStorage.getItem("formData");
+    if (saved) {
+        const data = JSON.parse(saved);
+
+        document.getElementById('in_nama').value = data.nama || '';
+        document.getElementById('in_nip').value = data.nip || '';
+        document.getElementById('in_jabatan').value = data.jabatan || '';
+        document.getElementById('in_wkpp').value = data.wkpp || '';
+        document.getElementById('in_kab').value = data.kab || '';
+        document.getElementById('in_bpp').value = data.bpp || '';
+        document.getElementById('in_bulan').value = data.bulan || 'JANUARI';
+        document.getElementById('in_tanggal').value = data.tanggal || '';
+        document.getElementById('in_nama_koor').value = data.nama_koor || '';
+        document.getElementById('in_nip_koor').value = data.nip_koor || '';
     }
+
+    // ✅ SET DEFAULT HANYA JIKA KOSONG
+    if (!document.getElementById('in_tanggal').value) {
+        document.getElementById('in_tanggal').value = new Date().toISOString().split('T')[0];
+    }
+
+    // ✅ SYNC TERAKHIR
+    sync();
+}
 
     function handleTTD(input) {
         const img1 = document.getElementById('out_ttd_img1');
@@ -630,7 +712,9 @@ LOKASI:
 BPP ${document.getElementById('in_bpp').value}, Kabupaten ${document.getElementById('in_kab').value}
 
 PERIODE:
-${document.getElementById('in_bulan').value} 2026
+const tahun = new Date().getFullYear();
+...
+${document.getElementById('in_bulan').value} ${tahun}
 
 KETENTUAN UMUM (WAJIB DIPATUHI):
 - Gunakan bahasa Indonesia baku, formal, dan administratif.
@@ -705,10 +789,22 @@ FORMAT OUTPUT (WAJIB):
       // ... (bagian awal kode Anda tetap sama)
 
 try {
-    const response = await fetch(webAppUrl, {
-        method: "POST",
-        body: JSON.stringify({ prompt: promptText })
-    });
+   const controller = new AbortController();
+setTimeout(() => controller.abort(), 15000); // timeout 15 detik
+    
+} catch (e) {
+    if (e.name === "AbortError") {
+        alert("⏱️ Server terlalu lama merespon. Coba lagi.");
+    } else {
+        alert("Kesalahan: " + e.message);
+    }
+}
+    
+const response = await fetch(webAppUrl, {
+    method: "POST",
+    body: JSON.stringify({ prompt: promptText }),
+    signal: controller.signal
+});
     
     if (!response.ok) throw new Error("Gagal terhubung ke Web App");
     
@@ -742,7 +838,8 @@ try {
         const el = document.getElementById(id);
         if (el) {
             const content = obj[fields[index]] || "";
-            el.innerHTML = content.replace(/\n/g, '<br>');
+            el.innerText = content;
+el.innerHTML = el.innerHTML.replace(/\n/g, "<br>");
         }
     });
 
@@ -768,18 +865,19 @@ try {
     document.querySelectorAll('.italic.text-gray-400').forEach(el => el.classList.remove('italic', 'text-gray-400'));
     
     // Alert ini akan muncul SETELAH UI terupdate
-    alert("✅ Laporan Berhasil Disusun!");
-    
-    if (typeof applySmartBreak === "function") {
-        setTimeout(applySmartBreak, 800);
-    }
+  setTimeout(() => {
+    applySmartBreak(); // untuk tabel BAB II
+    splitBab1();       // untuk BAB I
+}, 800);
+
+alert("✅ Laporan Berhasil Disusun!");
 
 } catch (e) { 
     console.error("Detail Error:", e);
     alert("Kesalahan: " + e.message); 
 } finally { 
     // Bagian ini WAJIB ada agar tombol kembali normal meskipun terjadi error
-    btn.innerHTML = "🚀 GENERATE NARASI LAPORAN"; 
+    btn.innerHTML = "🚀 GENERATE AI - NARASI LAPORAN"; 
     btn.disabled = false; 
 }
     }
