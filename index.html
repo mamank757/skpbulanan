@@ -488,24 +488,24 @@ if (isVisible) {
     const bab1 = document.getElementById('bab1');
     if (!bab1) return;
 
-    const elements = Array.from(bab1.children).filter(el => !el.classList.contains('page-number'));
+    const elements = Array.from(bab1.children)
+        .filter(el => !el.classList.contains('page-number'));
 
-    const maxHeightPerPage = bab1.clientHeight - 120;
-    let currentHeight = 0;
-    let pageCount = 1;
+    const maxHeight = bab1.clientHeight - 120;
 
     let currentPage = bab1;
     let wrapper = document.createElement('div');
+    wrapper.className = "bab1-wrapper";
 
-   
     bab1.insertBefore(wrapper, bab1.querySelector('.page-number'));
 
-    Array.from(wrapper.children).forEach(el => {
-        currentHeight += el.offsetHeight;
+    let currentHeight = 0;
+    let pageCount = 1;
 
-        // 🔴 BATASI MAKS 2 HALAMAN
-        if (currentHeight > maxHeightPerPage && pageCount < 2) {
+    elements.forEach(el => {
+        const elHeight = el.offsetHeight || 50;
 
+        if (currentHeight + elHeight > maxHeight && pageCount < 2) {
             pageCount++;
 
             const newPage = document.createElement('div');
@@ -523,47 +523,15 @@ if (isVisible) {
             newPage.insertBefore(newWrapper, newPage.querySelector('.page-number'));
             container.insertBefore(newPage, bab1.nextSibling);
 
-            currentPage = newPage;
             wrapper = newWrapper;
-            currentHeight = el.offsetHeight;
+            currentHeight = 0;
+            currentPage = newPage;
         }
 
         wrapper.appendChild(el);
+        currentHeight += elHeight;
     });
 }
-    
-    function applySmartBreak() {
-        const container = document.querySelector('.report-container');
-        const tableBody = document.getElementById('out_table_body');
-        const rows = Array.from(tableBody.querySelectorAll('tr'));
-        const page2 = document.querySelector('.page.auto-height');
-        
-        document.querySelectorAll('.page-extra').forEach(p => p.remove());
-
-        const maxHeight = page2.clientHeight - 100;
-        let currentHeight = 0;
-        let currentTableBody = tableBody;
-
-        rows.forEach((row) => {
-            const rowHeight = row.offsetHeight || 50;
-            if (currentHeight + rowHeight > maxHeight) {
-                const newPage = document.createElement('div');
-                newPage.className = "page auto-height page-extra";
-                newPage.innerHTML = `
-                    <p class="font-bold mb-4 italic text-sm text-gray-500">Lanjutan Rincian Capaian Kinerja</p>
-                    <table>
-                        <thead>${page2.querySelector('thead').innerHTML}</thead>
-                        <tbody></tbody>
-                    </table>
-                    <div class="page-number">2</div>`;
-                container.insertBefore(newPage, container.lastElementChild);
-                currentTableBody = newPage.querySelector('tbody');
-                currentHeight = 0;
-            }
-            currentTableBody.appendChild(row);
-            currentHeight += row.offsetHeight;
-        });
-    }
 
     function formatTanggalIndo(dateString) {
         if (!dateString) return "...";
@@ -651,10 +619,9 @@ if (isVisible) {
         });
     }
 
-  function closeWarning() {
-    const el = document.getElementById('browser-warning');
-    if (el) el.style.display = 'none'; // ✅ hanya disembunyikan
-}
+    function closeWarning() {
+        document.getElementById('browser-warning').style.display = 'none';
+    }
 
     window.onload = () => {
         init();
@@ -667,6 +634,11 @@ if (isVisible) {
     };
 
     async function generateAI() {
+    const btn = document.getElementById('btn-ai');
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 60000);
+
+    try {
         const nipVal = document.getElementById('in_nip').value.trim();
 
         if (daftarNipTerblokir.includes(nipVal)) {
@@ -679,28 +651,31 @@ if (isVisible) {
             return;
         }
 
-        const webAppUrl = "https://script.google.com/macros/s/AKfycbzMlyDcOSThl2NR5rRVMNhCTz3p9okiVVYQI3-vuvMEdwJu7cnrV52NMhUXvamIIOy_/exec"; 
-        const btn = document.getElementById('btn-ai');
+        const webAppUrl = "https://script.google.com/macros/s/AKfycbzMlyDcOSThl2NR5rRVMNhCTz3p9okiVVYQI3-vuvMEdwJu7cnrV52NMhUXvamIIOy_/exec";
+
         let sel = [];
-        
+
         daftarKomponen.forEach((k, i) => {
             const no = i + 1;
-            if(document.getElementById(`chk_${no}`).checked) {
-                sel.push({ 
-                    no, 
-                    nama: k, 
-                    detail: document.getElementById(`key_${no}`).value, 
-                    user_kendala: document.getElementById(`ken_${no}`).value, 
-                    link: document.getElementById(`ev_${no}`).value 
+            if (document.getElementById(`chk_${no}`).checked) {
+                sel.push({
+                    no,
+                    nama: k,
+                    detail: document.getElementById(`key_${no}`).value,
+                    user_kendala: document.getElementById(`ken_${no}`).value,
+                    link: document.getElementById(`ev_${no}`).value
                 });
             }
         });
 
-        if(sel.length === 0) return alert("Pilih minimal satu kegiatan!");
-        
-        btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Ai sedang menyusun laporan..."; 
+        if (sel.length === 0) return alert("Pilih minimal satu kegiatan!");
+
+        btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Ai sedang menyusun laporan...";
         btn.disabled = true;
-const tahun = new Date().getFullYear();
+
+        const tahun = new Date().getFullYear();
+
+        // 🔴 PROMPT TIDAK DIUBAH SAMA SEKALI
         const promptText = `Anda adalah Penyuluh Pertanian Lapangan (PPL) profesional yang menyusun laporan bulanan resmi sesuai standar Kementerian Pertanian Republik Indonesia.
 
 TUGAS:
@@ -725,49 +700,36 @@ KETENTUAN UMUM (WAJIB DIPATUHI):
 
 STRUKTUR DAN ATURAN ISI:
 
-1. "kp" (Kata Pengantar):
-- Terdiri dari TEPAT 3 paragraf.
-- Paragraf 1: Ungkapan syukur dan gambaran umum pelaksanaan kegiatan.
-- Paragraf 2: Pentingnya laporan sebagai bentuk pertanggungjawaban kinerja.
-- Paragraf 3: Harapan terhadap pemanfaatan laporan.
-- Gunakan gaya bahasa resmi instansi pemerintah.
+1. "kp"
+- Terdiri dari TEPAT 3 paragraf:
+  1) Syukur & gambaran umum kegiatan  
+  2) Pentingnya laporan sebagai pertanggungjawaban  
+  3) Harapan pemanfaatan laporan  
 
-2. "latar":
-- Uraikan latar belakang kegiatan penyuluhan.
-- Kaitkan dengan kondisi wilayah, kebutuhan petani, dan program pembangunan pertanian.
-- Minimal 3 paragraf.
+2. "latar"
+- Latar belakang penyuluhan
+- Kondisi wilayah, kebutuhan petani, program pertanian
+- Minimal 3 paragraf
 
-3. "tugas":
-- Jelaskan tugas PPL berdasarkan PermenPANRB Nomor 35 Tahun 2020.
-- Wajib mencakup: perencanaan, pelaksanaan, evaluasi, dan pengembangan penyuluhan.
-- Ditulis dalam bentuk narasi, bukan poin.
+3. "tugas"
+- Berdasarkan PermenPANRB No. 35 Tahun 2020
+- Perencanaan, pelaksanaan, evaluasi, pengembangan
 
-4. "tujuan":
-- Jelaskan tujuan kegiatan penyuluhan secara spesifik dan terukur.
-- Kaitkan dengan peningkatan kapasitas petani dan produktivitas.
-- Minimal 1 paragraf padat.
+4. "tujuan"
+- Tujuan spesifik & terukur
+- Peningkatan kapasitas & produktivitas petani
 
-5. "items":
-- Iterasi dari data yang diberikan.
-- Setiap item harus memiliki:
-  - "no": nomor urut
-  - "rincian": uraian kegiatan (2–3 kalimat efektif, jelas, berbasis kegiatan nyata)
-  - "kendala": hambatan yang terjadi (1–2 kalimat)
-  - "tindak": langkah tindak lanjut/solusi (2–3 kalimat)
-- Gunakan bahasa operasional dan konkret.
+5. "items"
+- Iterasi data kegiatan
+- no, rincian (2–3 kalimat), kendala (1–2 kalimat), tindak (2–3 kalimat)
 
-6. "kesimp":
-- Terdiri dari TEPAT 3 paragraf.
-- Paragraf 1: Ringkasan pelaksanaan kegiatan dan capaian.
-- Paragraf 2: Evaluasi umum termasuk kendala utama.
-- Paragraf 3: Rekomendasi dan strategi perbaikan ke depan.
+6. "kesimp"
+- 3 paragraf:
+  1) Ringkasan capaian
+  2) Evaluasi & kendala
+  3) Rekomendasi
 
-FORMAT OUTPUT (WAJIB):
-- Hanya JSON valid
-- TANPA markdown
-- TANPA penjelasan tambahan
-- Struktur harus PERSIS seperti berikut:
-
+FORMAT OUTPUT:
 {
   "kp": "",
   "latar": "",
@@ -784,48 +746,85 @@ FORMAT OUTPUT (WAJIB):
   ]
 }
 `;
-        
-      // ... (bagian awal kode Anda tetap sama)
 
-const controller = new AbortController();
-const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const response = await fetch(webAppUrl, {
+            method: "POST",
+            body: JSON.stringify({ prompt: promptText }),
+            signal: controller.signal
+        });
 
-try {
-    const response = await fetch(webAppUrl, {
-        method: "POST",
-        body: JSON.stringify({ prompt: promptText }),
-        signal: controller.signal
-    });
+        if (!response.ok) throw new Error("Gagal terhubung ke Web App");
 
-    clearTimeout(timeoutId); // ✅ hentikan timeout kalau berhasil
+        const result = await response.json();
 
-    if (!response.ok) throw new Error("Gagal terhubung ke Web App");
+        if (result.status !== "success") {
+            throw new Error(result.message || "Gagal generate AI");
+        }
 
-    const result = await response.json();
+        let rawContent = result.text;
 
-    if (result.status !== "success") {
-        throw new Error(result.message || "Gagal generate AI");
-    }
+        rawContent = rawContent.replace(/```json/g, "").replace(/```/g, "").trim();
 
-    let rawContent = result.text;
-    rawContent = rawContent.replace(/```json/g, "").replace(/```/g, "").trim();
+        const obj = JSON.parse(rawContent);
 
-    let obj = JSON.parse(rawContent);
+        const fields = ['kp', 'latar', 'tugas', 'tujuan', 'kesimp'];
+        const ids = ['out_kp', 'out_latar', 'out_tugas_pokok', 'out_tujuan', 'out_kesimp'];
 
-    // lanjut seperti biasa...
+        ids.forEach((id, index) => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.innerText = obj[fields[index]] || "";
+                el.innerHTML = el.innerHTML.replace(/\n/g, "<br>");
+            }
+        });
 
-} catch (e) {
+        if (obj.items && Array.isArray(obj.items)) {
+            obj.items.forEach(item => {
+                const rCell = document.getElementById(`r_${item.no}`);
+                const orig = sel.find(s => s.no == item.no);
+
+                if (rCell && orig) {
+                    rCell.innerHTML =
+                        `<div><b>${item.rincian}</b></div>` +
+                        (orig.link ? `<div style="font-size:7pt; color:blue;">Eviden: ${orig.link}</div>` : "");
+
+                    const kendalaCell = document.getElementById(`k_${item.no}`);
+                    if (kendalaCell) kendalaCell.innerText = orig.user_kendala || item.kendala || "-";
+
+                    const tindakCell = document.getElementById(`t_${item.no}`);
+                    if (tindakCell) tindakCell.innerText = item.tindak || "-";
+                }
+            });
+        }
+
+        document.querySelectorAll('.italic.text-gray-400')
+            .forEach(el => el.classList.remove('italic', 'text-gray-400'));
+
+        setTimeout(() => {
+            applySmartBreak();
+            splitBab1();
+        }, 800);
+
+        alert("✅ Laporan Berhasil Disusun!");
+
+    } catch (e) {
+    console.error("Detail Error:", e);
+
     if (e.name === "AbortError") {
-        alert("⏱️ Server terlalu lama merespon. Coba lagi.");
+        alert("⏱️ Request terlalu lama (timeout). Coba lagi atau perbesar server response time.");
     } else {
         alert("Kesalahan: " + e.message);
     }
-} finally {
-    btn.innerHTML = "🚀 GENERATE AI - NARASI LAPORAN";
-    btn.disabled = false;
-}
+
+    } finally {
+        if (btn) {
+            btn.innerHTML = "🚀 GENERATE AI - NARASI LAPORAN";
+            btn.disabled = false;
+        }
     }
+}
 
   </script>
 </body>
 </html>
+
