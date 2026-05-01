@@ -651,9 +651,10 @@ if (isVisible) {
         });
     }
 
-    function closeWarning() {
-        document.getElementById('browser-warning').style.display = 'none';
-    }
+  function closeWarning() {
+    const el = document.getElementById('browser-warning');
+    if (el) el.style.display = 'none'; // ✅ hanya disembunyikan
+}
 
     window.onload = () => {
         init();
@@ -788,8 +789,10 @@ FORMAT OUTPUT (WAJIB):
         
       // ... (bagian awal kode Anda tetap sama)
 
+const controller = new AbortController();
+setTimeout(() => controller.abort(), 15000);
+
 try {
-   const controller = new AbortController();
 setTimeout(() => controller.abort(), 15000); // timeout 15 detik
     
 } catch (e) {
