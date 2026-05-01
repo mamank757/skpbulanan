@@ -700,7 +700,7 @@ if (isVisible) {
         
         btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Ai sedang menyusun laporan..."; 
         btn.disabled = true;
-
+const tahun = new Date().getFullYear();
         const promptText = `Anda adalah Penyuluh Pertanian Lapangan (PPL) profesional yang menyusun laporan bulanan resmi sesuai standar Kementerian Pertanian Republik Indonesia.
 
 TUGAS:
@@ -713,8 +713,6 @@ LOKASI:
 BPP ${document.getElementById('in_bpp').value}, Kabupaten ${document.getElementById('in_kab').value}
 
 PERIODE:
-const tahun = new Date().getFullYear();
-...
 ${document.getElementById('in_bulan').value} ${tahun}
 
 KETENTUAN UMUM (WAJIB DIPATUHI):
@@ -790,98 +788,41 @@ FORMAT OUTPUT (WAJIB):
       // ... (bagian awal kode Anda tetap sama)
 
 const controller = new AbortController();
-setTimeout(() => controller.abort(), 15000);
+const timeoutId = setTimeout(() => controller.abort(), 15000);
 
 try {
-setTimeout(() => controller.abort(), 15000); // timeout 15 detik
-    
+    const response = await fetch(webAppUrl, {
+        method: "POST",
+        body: JSON.stringify({ prompt: promptText }),
+        signal: controller.signal
+    });
+
+    clearTimeout(timeoutId); // ✅ hentikan timeout kalau berhasil
+
+    if (!response.ok) throw new Error("Gagal terhubung ke Web App");
+
+    const result = await response.json();
+
+    if (result.status !== "success") {
+        throw new Error(result.message || "Gagal generate AI");
+    }
+
+    let rawContent = result.text;
+    rawContent = rawContent.replace(/```json/g, "").replace(/```/g, "").trim();
+
+    let obj = JSON.parse(rawContent);
+
+    // lanjut seperti biasa...
+
 } catch (e) {
     if (e.name === "AbortError") {
         alert("⏱️ Server terlalu lama merespon. Coba lagi.");
     } else {
         alert("Kesalahan: " + e.message);
     }
-}
-    
-const response = await fetch(webAppUrl, {
-    method: "POST",
-    body: JSON.stringify({ prompt: promptText }),
-    signal: controller.signal
-});
-    
-    if (!response.ok) throw new Error("Gagal terhubung ke Web App");
-    
-    const result = await response.json();
-
-    // Verifikasi status dari Apps Script
-    if (result.status !== "success") {
-        throw new Error(result.message || "Gagal generate AI");
-    }
-
-    let rawContent = result.text;
-
-    // 1. MEMBERSIHKAN TEKS (Regex diperbaiki agar dalam satu baris)
-    rawContent = rawContent.replace(/```json/g, "").replace(/```/g, "").trim();
-
-    // 2. PARSING JSON
-    let obj;
-    try {
-        obj = JSON.parse(rawContent);
-    } catch (parseError) {
-        console.error("JSON Rusak:", rawContent);
-        throw new Error("Format laporan dari AI terputus. Silakan klik Generate ulang.");
-    }
-
-    // 3. MENAMPILKAN DATA KE UI
-    // Pastikan ID elemen ini (out_kp, dll) memang ada di HTML Anda
-    const fields = ['kp', 'latar', 'tugas', 'tujuan', 'kesimp'];
-    const ids = ['out_kp', 'out_latar', 'out_tugas_pokok', 'out_tujuan', 'out_kesimp'];
-    
-    ids.forEach((id, index) => {
-        const el = document.getElementById(id);
-        if (el) {
-            const content = obj[fields[index]] || "";
-            el.innerText = content;
-el.innerHTML = el.innerHTML.replace(/\n/g, "<br>");
-        }
-    });
-
-    // 4. ITERASI ITEM KEGIATAN
-    if (obj.items && Array.isArray(obj.items)) {
-        obj.items.forEach(item => {
-            const rCell = document.getElementById(`r_${item.no}`);
-            const orig = sel.find(s => s.no == item.no);
-            
-            if (rCell && orig) {
-                rCell.innerHTML = `<div><b>${item.rincian}</b></div>${orig.link ? `<div style="font-size:7pt; color:blue;">Eviden: ${orig.link}</div>` : ""}`;
-                
-                const kendalaCell = document.getElementById(`k_${item.no}`);
-                if(kendalaCell) kendalaCell.innerText = orig.user_kendala || item.kendala || "-";
-                
-                const tindakCell = document.getElementById(`t_${item.no}`);
-                if(tindakCell) tindakCell.innerText = item.tindak || "-";
-            }
-        });
-    }
-
-    // Menghilangkan indikator loading manual jika ada
-    document.querySelectorAll('.italic.text-gray-400').forEach(el => el.classList.remove('italic', 'text-gray-400'));
-    
-    // Alert ini akan muncul SETELAH UI terupdate
-  setTimeout(() => {
-    applySmartBreak(); // untuk tabel BAB II
-    splitBab1();       // untuk BAB I
-}, 800);
-
-alert("✅ Laporan Berhasil Disusun!");
-
-} catch (e) { 
-    console.error("Detail Error:", e);
-    alert("Kesalahan: " + e.message); 
-} finally { 
-    // Bagian ini WAJIB ada agar tombol kembali normal meskipun terjadi error
-    btn.innerHTML = "🚀 GENERATE AI - NARASI LAPORAN"; 
-    btn.disabled = false; 
+} finally {
+    btn.innerHTML = "🚀 GENERATE AI - NARASI LAPORAN";
+    btn.disabled = false;
 }
     }
 
