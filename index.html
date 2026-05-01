@@ -11,19 +11,26 @@
         
         body { background: #0f172a; color: #f1f5f9; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
         
-       .page {
-    background: white; 
-    width: 215mm; /* Ubah dari 210mm ke 215mm */
-    min-height: 330mm; /* Ubah dari 297mm ke 330mm */
-    padding: 25mm 20mm 20mm 20mm; 
-    margin: 20px auto; 
+     .page {
+    background: white;
+    width: 215mm;
+    min-height: 330mm;
+
+    /* FIX PENTING */
+    height: auto;
+
+    padding: 25mm 20mm 20mm 20mm;
+    margin: 20px auto;
+
     color: black;
-    font-family: 'Times New Roman', Times, serif; 
-    font-size: 11pt; 
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 11pt;
     line-height: 1.5;
-    box-shadow: 0 0 40px rgba(0,0,0,0.5); 
+
+    box-shadow: 0 0 40px rgba(0,0,0,0.5);
     position: relative;
-    box-sizing: border-box; 
+    box-sizing: border-box;
+
     overflow: visible;
 }
 
@@ -94,51 +101,64 @@
     pointer-events: none; /* Agar tidak mengganggu klik pada teks jika perlu */
     mix-blend-mode: multiply; /* Membuat background putih pada TTD jadi transparan */
 }
-   @media print {
-    @page { 
-        size: 215mm 330mm; /* Kertas F4 */
-        margin: 0; 
-    }
-    
-    body { background: white; padding: 0; margin: 0; }
-    .no-print { display: none !important; }
+  @media print {
 
-    .page { 
-        margin: 0 !important; 
-        box-shadow: none; 
-        width: 215mm; 
-        height: 330mm; 
-        padding: 25mm 20mm 20mm 20mm; /* Margin: Atas 25mm agar tidak mepet, Samping 20mm */
+    @page {
+        size: 215mm 330mm;
+        margin: 0;
+    }
+
+    body {
+        background: white;
+        margin: 0;
+        padding: 0;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+
+    .page {
+        width: 215mm;
+
+        /* FIX UTAMA: jangan kunci tinggi */
+        height: auto !important;
+
+        margin: 0 !important;
+        box-shadow: none;
+
+        padding: 25mm 20mm 20mm 20mm;
+
+        /* 🔥 INI KUNCI BAB MELUAP */
+        break-after: page;
         page-break-after: always;
-        position: relative;
-        display: block;
-        color: black;
+
+        break-inside: auto;
     }
 
-    /* Kunci agar Bab II bisa meluap ke halaman baru */
-    .page.auto-height {
-        height: auto !important; 
-        min-height: 330mm;
+    /* supaya teks tidak “terkunci” dalam 1 blok */
+    p, div, h1, h2, h3 {
+        break-inside: auto;
     }
 
-    table { 
-        page-break-inside: auto; 
+    table {
         width: 100% !important;
-    }
-    
-    tr { 
-        page-break-inside: avoid; /* Baris tabel tidak akan terpotong di tengah */
-    }
-    
-    thead { 
-        display: table-header-group; 
+        page-break-inside: auto;
     }
 
-    .page-number { 
-        position: absolute; 
-        bottom: 10mm; 
-        left: 50%; 
-        transform: translateX(-50%); 
+    tr {
+        page-break-inside: avoid;
+    }
+
+    thead {
+        display: table-header-group;
+    }
+
+    .page-number {
+        position: absolute;
+        bottom: 10mm;
+        left: 50%;
+        transform: translateX(-50%);
     }
 }
         .report-container { width: 100%; max-width: 80rem; margin: 0 auto; display: flex; flex-direction: column; align-items: center; padding: 0 1rem; }
@@ -802,7 +822,7 @@ FORMAT OUTPUT:
 
         setTimeout(() => {
             applySmartBreak();
-            splitBab1();
+         
         }, 800);
 
         alert("✅ Laporan Berhasil Disusun!");
@@ -815,7 +835,7 @@ FORMAT OUTPUT:
     } else {
         alert("Kesalahan: " + e.message);
     }
- 
+
     } finally {
         if (btn) {
             btn.innerHTML = "🚀 GENERATE AI - NARASI LAPORAN";
