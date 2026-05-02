@@ -34,6 +34,31 @@
     overflow: visible;
 }
 
+.page-extra-bab1 {
+    break-before: page;
+    page-break-before: always;
+}
+
+/* Pastikan pembungkus konten di halaman baru tetap justify */
+.content-wrapper {
+    text-align: justify;
+    line-height: 1.5;
+    width: 100%;
+}
+
+/* Memastikan halaman tambahan punya padding yang sama dengan halaman utama */
+.page-extra-bab1 {
+    display: block;
+    background: white;
+    padding: 25mm 20mm 20mm 20mm; /* Sama dengan .page */
+}
+
+/* Memastikan konten Bab I yang panjang tetap justify */
+#out_kp, #out_latar, #out_tugas_pokok, #out_tujuan, #out_kesimp {
+    line-height: 1.6;
+    text-align: justify;
+    margin-bottom: 15px;
+}
         .page-number { position: absolute; bottom: 10mm; left: 50%; transform: translateX(-50%); font-size: 10pt; }
         
         /* Pengaturan Tabel - Optimasi Kolom */
@@ -461,10 +486,10 @@ if (isVisible) {
         }
     }
 
-   function sync() {
+  function sync() {
     const val = (id) => document.getElementById(id).value;
 
-    // Sync tampilan
+    // 1. Sinkronisasi Tampilan (Visual)
     document.getElementById('out_nama_cover').innerText = val('in_nama') || '-';
     document.getElementById('out_nip_cover').innerText = val('in_nip') || '-';
     document.getElementById('out_wkpp_cover').innerText = val('in_wkpp') || '-';
@@ -487,7 +512,24 @@ if (isVisible) {
 
     validasiNipRealtime();
 
-    // ✅ SIMPAN KE LOCAL STORAGE (INI YANG DIPINDAH)
+    // 2. Ambil Riwayat Ketikan Item Kegiatan
+    let kegiatanData = [];
+    daftarKomponen.forEach((k, i) => {
+        const no = i + 1;
+        // Pastikan elemen ada sebelum mengambil nilai
+        const chk = document.getElementById(`chk_${no}`);
+        if (chk) {
+            kegiatanData.push({
+                no: no,
+                checked: chk.checked,
+                detail: document.getElementById(`key_${no}`).value,
+                kendala: document.getElementById(`ken_${no}`).value,
+                eviden: document.getElementById(`ev_${no}`).value
+            });
+        }
+    });
+
+    // 3. Simpan SEMUA Data ke Local Storage
     localStorage.setItem("formData", JSON.stringify({
         nama: val('in_nama'),
         nip: val('in_nip'),
@@ -498,58 +540,50 @@ if (isVisible) {
         bulan: val('in_bulan'),
         tanggal: val('in_tanggal'),
         nama_koor: val('in_nama_koor'),
-        nip_koor: val('in_nip_koor')
+        nip_koor: val('in_nip_koor'),
+        kegiatan: kegiatanData // Data ketikan item disimpan di sini
     }));
 }
-   function splitBab1() {
-    document.querySelectorAll('.page-extra').forEach(p => p.remove());
+ function splitBab1() {
+    // 1. Hapus halaman tambahan Bab I yang lama jika ada (reset sebelum hitung ulang)
+    document.querySelectorAll('.page-extra-bab1').forEach(p => p.remove());
 
     const container = document.querySelector('.report-container');
     const bab1 = document.getElementById('bab1');
     if (!bab1) return;
 
-    const elements = Array.from(bab1.children)
-        .filter(el => !el.classList.contains('page-number'));
-
-    const maxHeight = bab1.clientHeight - 120;
-
-    let currentPage = bab1;
-    let wrapper = document.createElement('div');
-    wrapper.className = "bab1-wrapper";
-
-    bab1.insertBefore(wrapper, bab1.querySelector('.page-number'));
+    // 2. Ambil semua elemen paragraf/judul di dalam Bab 1
+    const elements = Array.from(bab1.children).filter(el => !el.classList.contains('page-number'));
+    
+    // 3. Batas tinggi maksimal (sesuaikan jika teks masih menabrak footer)
+    const maxHeight = 950; 
 
     let currentHeight = 0;
-    let pageCount = 1;
+    let extraPage = null;
+    let extraWrapper = null;
 
     elements.forEach(el => {
-        const elHeight = el.offsetHeight || 50;
+        currentHeight += el.offsetHeight;
 
-        if (currentHeight + elHeight > maxHeight && pageCount < 2) {
-            pageCount++;
-
-            const newPage = document.createElement('div');
-            newPage.className = "page auto-height page-extra";
-
-            const newWrapper = document.createElement('div');
-
-            newPage.innerHTML = `
-                <h2 class="font-bold text-lg mb-6 uppercase text-center">
-                    BAB I. PENDAHULUAN (Lanjutan)
-                </h2>
-                <div class="page-number">1</div>
-            `;
-
-            newPage.insertBefore(newWrapper, newPage.querySelector('.page-number'));
-            container.insertBefore(newPage, bab1.nextSibling);
-
-            wrapper = newWrapper;
-            currentHeight = 0;
-            currentPage = newPage;
+        // 4. Jika tinggi total elemen sudah lewat batas, pindahkan ke halaman baru
+        if (currentHeight > maxHeight) {
+            if (!extraPage) {
+                // Buat halaman baru (TIMPA bagian ini dengan kode yang ada style-nya)
+                extraPage = document.createElement('div');
+                extraPage.className = "page auto-height page-extra-bab1";
+                extraPage.innerHTML = `
+                    <h2 class="font-bold text-lg mb-6 uppercase text-center">BAB I. PENDAHULUAN (Lanjutan)</h2>
+                    <div class="content-wrapper" style="font-family: 'Times New Roman', serif; font-size: 11pt; text-align: justify;"></div>
+                    <div class="page-number">1</div>
+                `;
+                
+                // Masukkan halaman baru tepat setelah Bab 1 asli
+                container.insertBefore(extraPage, bab1.nextSibling);
+                extraWrapper = extraPage.querySelector('.content-wrapper');
+            }
+            // Pindahkan sisa paragraf ke halaman tambahan
+            extraWrapper.appendChild(el);
         }
-
-        wrapper.appendChild(el);
-        currentHeight += elHeight;
     });
 }
 
@@ -563,18 +597,19 @@ if (isVisible) {
     const cont = document.getElementById('input_container');
     cont.innerHTML = "";
 
-    daftarKomponen.forEach((k, i) => {
+   daftarKomponen.forEach((k, i) => {
         const no = i + 1;
         cont.innerHTML += `
             <div class="input-card" id="card_${no}">
                 <div class="flex items-start gap-3 mb-2">
-                    <input type="checkbox" id="chk_${no}" onchange="toggle(${no})" class="w-5 h-5 mt-1">
+                    <input type="checkbox" id="chk_${no}" onchange="toggle(${no}); sync();" class="w-5 h-5 mt-1">
                     <label for="chk_${no}" class="font-bold text-sm text-slate-200 cursor-pointer">${no}. ${k}</label>
                 </div>
                 <div id="box_${no}" class="hidden-input space-y-2">
-                    <textarea id="key_${no}" placeholder="Detail aktivitas..."></textarea>
-                    <textarea id="ken_${no}" placeholder="Tulis kendala..." class="bg-red-900/20 border-red-500/50"></textarea>
-                    <input type="text" id="ev_${no}" class="text-xs" placeholder="Link G-Drive Eviden">
+                    <!-- TAMBAHKAN oninput="sync()" DI BAWAH INI -->
+                    <textarea id="key_${no}" oninput="sync()" placeholder="Detail aktivitas..."></textarea>
+                    <textarea id="ken_${no}" oninput="sync()" placeholder="Tulis kendala..." class="bg-red-900/20 border-red-500/50"></textarea>
+                    <input type="text" id="ev_${no}" oninput="sync()" class="text-xs" placeholder="Link G-Drive Eviden">
                 </div>
             </div>`;
     });
@@ -584,6 +619,7 @@ if (isVisible) {
     if (saved) {
         const data = JSON.parse(saved);
 
+        // Load Data Profil
         document.getElementById('in_nama').value = data.nama || '';
         document.getElementById('in_nip').value = data.nip || '';
         document.getElementById('in_jabatan').value = data.jabatan || '';
@@ -594,6 +630,26 @@ if (isVisible) {
         document.getElementById('in_tanggal').value = data.tanggal || '';
         document.getElementById('in_nama_koor').value = data.nama_koor || '';
         document.getElementById('in_nip_koor').value = data.nip_koor || '';
+
+        // Load Riwayat Ketikan Item Kegiatan
+        if (data.kegiatan && Array.isArray(data.kegiatan)) {
+            data.kegiatan.forEach(item => {
+                const chk = document.getElementById(`chk_${item.no}`);
+                const key = document.getElementById(`key_${item.no}`);
+                const ken = document.getElementById(`ken_${item.no}`);
+                const ev = document.getElementById(`ev_${item.no}`);
+
+                if (chk && item.checked) {
+                    chk.checked = true;
+                    // Tampilkan box input jika sebelumnya dicentang
+                    document.getElementById(`box_${item.no}`).style.display = 'block';
+                    document.getElementById(`card_${item.no}`).classList.add('active');
+                }
+                if (key) key.value = item.detail || '';
+                if (ken) ken.value = item.kendala || '';
+                if (ev) ev.value = item.eviden || '';
+            });
+        }
     }
 
     // ✅ SET DEFAULT HANYA JIKA KOSONG
@@ -828,6 +884,10 @@ const obj = JSON.parse(jsonMatch[0]);
         }, 800);
 
         alert("✅ Laporan Berhasil Disusun!");
+        // Panggil fungsi pemecah halaman di sini
+        setTimeout(() => {
+            splitBab1(); 
+        }, 500); // Beri jeda sedikit agar browser selesai merender teks dari AI
 
     } catch (e) {
     console.error("Detail Error:", e);
