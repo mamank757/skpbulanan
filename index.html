@@ -550,7 +550,7 @@ if (isVisible) {
 
     document.getElementById('out_nama_koor').innerText = val('in_nama_koor') || 'NAMA KOORDINATOR';
     document.getElementById('out_nip_koor').innerText = val('in_nip_koor') || '-';
-
+document.getElementById('out_nama_cover').innerText = val('in_nama') || '-';
     const tgl = formatTanggalIndo(val('in_tanggal'));
     const lok = val('in_bpp') || '...';
     document.getElementById('out_lokasi_tgl1').innerText = `${lok}, ${tgl}`;
