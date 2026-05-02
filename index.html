@@ -362,7 +362,7 @@
     </div>
 
    <!-- Cari kode ini dan ganti -->
-<div class="page auto-height">
+<div class="page auto-height" id="page-bab2">
     <h2 class="font-bold text-lg mb-2 uppercase text-center">BAB II. PEMBAHASAN</h2>
     <p class="font-bold mb-4">Rincian Capaian Kinerja Bulan <span id="out_bulan_2">JANUARI</span> <span class="out_tahun">-</span></p>
     ...
@@ -458,6 +458,43 @@
         }
     }
 
+function applySmartBreak() {
+    const bab2 = document.getElementById('page-bab2');
+    if (!bab2) return;
+    
+    const table = bab2.querySelector('table');
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const container = document.querySelector('.report-container');
+    
+    // Batas tinggi maksimal tabel di satu halaman F4 (sekitar 750px)
+    const maxHeight = 750; 
+    let currentHeight = 0;
+    let extraPage = null;
+    let newTable = null;
+
+    rows.forEach((row) => {
+        currentHeight += row.offsetHeight;
+        if (currentHeight > maxHeight) {
+            if (!extraPage) {
+                extraPage = document.createElement('div');
+                extraPage.className = "page auto-height";
+                extraPage.innerHTML = `
+                    <h2 class="font-bold text-lg mb-2 uppercase text-center">BAB II. PEMBAHASAN (Lanjutan)</h2>
+                    <p class="font-bold mb-4">Rincian Capaian Kinerja (Lanjutan)</p>
+                    <table>
+                        <thead>${table.querySelector('thead').innerHTML}</thead>
+                        <tbody></tbody>
+                    </table>
+                    <div class="page-number">2</div>
+                `;
+                container.insertBefore(extraPage, bab2.nextSibling);
+                newTable = extraPage.querySelector('tbody');
+            }
+            newTable.appendChild(row);
+        }
+    });
+}
     function toggleKoordinator() {
         const areaKoor = document.getElementById('area-koordinator');
         const inputDetail = document.getElementById('input-koor-detail');
@@ -487,6 +524,7 @@ if (isVisible) {
             reader.readAsDataURL(input.files[0]);
         }
     }
+
 
   function sync() {
     const val = (id) => document.getElementById(id).value;
@@ -719,28 +757,24 @@ document.getElementById('out_nama_cover').innerText = val('in_nama') || '-';
         });
     };
 
-    async function generateAI() {
+   async function generateAI() {
     const btn = document.getElementById('btn-ai');
     const controller = new AbortController();
     setTimeout(() => controller.abort(), 60000);
 
     try {
         const nipVal = document.getElementById('in_nip').value.trim();
-
         if (daftarNipTerblokir.includes(nipVal)) {
             alert("🚫 AKSES ANDA DITOLAK");
             return;
         }
-
         if (!nipVal) {
             alert("Silakan masukkan NIP terlebih dahulu!");
             return;
         }
 
         const webAppUrl = "https://script.google.com/macros/s/AKfycbzMlyDcOSThl2NR5rRVMNhCTz3p9okiVVYQI3-vuvMEdwJu7cnrV52NMhUXvamIIOy_/exec";
-
         let sel = [];
-
         daftarKomponen.forEach((k, i) => {
             const no = i + 1;
             if (document.getElementById(`chk_${no}`).checked) {
@@ -760,9 +794,7 @@ document.getElementById('out_nama_cover').innerText = val('in_nama') || '-';
         btn.disabled = true;
 
         const tahun = new Date().getFullYear();
-
-        // 🔴 PROMPT TIDAK DIUBAH SAMA SEKALI
-        const promptText = `Anda adalah Penyuluh Pertanian Lapangan (PPL) profesional yang menyusun laporan bulanan resmi sesuai standar Kementerian Pertanian Republik Indonesia.
+       const promptText = `Anda adalah Penyuluh Pertanian Lapangan (PPL) profesional yang menyusun laporan bulanan resmi sesuai standar Kementerian Pertanian Republik Indonesia.
 
 TUGAS:
 Susun narasi laporan bulanan yang formal, objektif, sistematis, dan sesuai kaidah bahasa Indonesia baku.
@@ -842,70 +874,117 @@ FORMAT OUTPUT:
         if (!response.ok) throw new Error("Gagal terhubung ke Web App");
 
         const result = await response.json();
+        if (result.status !== "success") throw new Error(result.message || "Gagal generate AI");
 
-        if (result.status !== "success") {
-            throw new Error(result.message || "Gagal generate AI");
+        // --- PROSES PEMBERSIHAN & PERBAIKAN JSON ---
+       // --- PROSES PEMBERSIHAN & PERBAIKAN JSON (VERSI ULTRA-CLEAN) ---
+        let cleanText = result.text.trim();
+        const firstBracket = cleanText.indexOf('{');
+        if (firstBracket === -1) throw new Error("Format AI tidak terbaca.");
+        
+        // Ambil teks dari kurung buka pertama sampai akhir
+        cleanText = cleanText.substring(firstBracket);
+
+        // Hapus karakter kontrol yang sering bikin JSON.parse mogok (Solusi Gambar 6 & 7)
+        cleanText = cleanText.replace(/[\u0000-\u001F\u007F-\u009F]/g, "");
+
+        // FUNGSI SAKTI: Menutup paksa JSON dan membuang potongan teks gantung di akhir (Solusi Gambar 8)
+        function tutupJsonPaksa(str) {
+            let kurung = 0; 
+            let petik = false; 
+            let hasil = "";
+            let posisiTerakhirBenar = 0;
+
+            for (let i = 0; i < str.length; i++) {
+                let char = str[i];
+                // Cek apakah sedang di dalam tanda petik (string)
+                if (char === '"' && str[i-1] !== '\\') petik = !petik;
+                
+                if (!petik) {
+                    if (char === '{' || char === '[') kurung++;
+                    if (char === '}' || char === ']') kurung--;
+                }
+                
+                hasil += char;
+
+                // Jika kurung seimbang (kembali ke 0), tandai ini sebagai titik aman
+                if (kurung === 0 && i > 0) {
+                    posisiTerakhirBenar = i + 1;
+                    break; 
+                }
+            }
+
+            // Jika perulangan selesai tapi kurung belum 0, berarti JSON terpotong di tengah (Kasus Gambar 8)
+            if (kurung > 0) {
+                // Buang koma atau karakter gantung di ujung sebelum ditutup paksa
+                hasil = hasil.trim().replace(/,[^,]*$/, ""); 
+                if (petik) hasil += '"'; // Tutup petik kalau masih menganga
+                while (kurung > 0) { 
+                    hasil += '}'; 
+                    kurung--; 
+                }
+            } else if (posisiTerakhirBenar > 0) {
+                // Jika sudah seimbang, ambil hanya sampai titik aman (buang teks sampah di belakangnya)
+                hasil = hasil.substring(0, posisiTerakhirBenar);
+            }
+            
+            return hasil;
         }
 
-       // Mengambil teks hanya di dalam kurung kurawal agar karakter sampah hilang
-const jsonMatch = result.text.match(/\{[\s\S]*\}/);
-if (!jsonMatch) throw new Error("Format AI tidak valid. Coba klik Generate lagi.");
+        const jsonTerperbaiki = tutupJsonPaksa(cleanText);
+        const obj = JSON.parse(jsonTerperbaiki); 
+        // ------------------------------------------------------------------
 
-const obj = JSON.parse(jsonMatch[0]);
+        // --- MENEMPELKAN DATA KE HTML (VERSI BERSIH) ---
+        
+        // 1. Bab I dan Bab III
+        const mapData = {
+            'kp': 'out_kp',
+            'latar': 'out_latar',
+            'tugas': 'out_tugas_pokok',
+            'tujuan': 'out_tujuan',
+            'kesimp': 'out_kesimp'
+        };
 
-        const fields = ['kp', 'latar', 'tugas', 'tujuan', 'kesimp'];
-        const ids = ['out_kp', 'out_latar', 'out_tugas_pokok', 'out_tujuan', 'out_kesimp'];
-
-        ids.forEach((id, index) => {
+        for (const [key, id] of Object.entries(mapData)) {
             const el = document.getElementById(id);
-            if (el) {
-                el.innerText = obj[fields[index]] || "";
+            if (el && obj[key]) {
+                el.innerText = obj[key];
                 el.innerHTML = el.innerHTML.replace(/\n/g, "<br>");
             }
-        });
+        }
 
+        // 2. Tabel Bab II
         if (obj.items && Array.isArray(obj.items)) {
             obj.items.forEach(item => {
                 const rCell = document.getElementById(`r_${item.no}`);
                 const orig = sel.find(s => s.no == item.no);
 
-                if (rCell && orig) {
-                    rCell.innerHTML =
-                        `<div><b>${item.rincian}</b></div>` +
-                        (orig.link ? `<div style="font-size:7pt; color:blue;">Eviden: ${orig.link}</div>` : "");
-
-                    const kendalaCell = document.getElementById(`k_${item.no}`);
-                    if (kendalaCell) kendalaCell.innerText = orig.user_kendala || item.kendala || "-";
-
-                    const tindakCell = document.getElementById(`t_${item.no}`);
-                    if (tindakCell) tindakCell.innerText = item.tindak || "-";
+                if (rCell) {
+                    rCell.innerHTML = `<div><b>${item.rincian}</b></div>` +
+                        (orig && orig.link ? `<div style="font-size:7pt; color:blue;">Eviden: ${orig.link}</div>` : "");
+                    
+                    const kCell = document.getElementById(`k_${item.no}`);
+                    if (kCell) kCell.innerText = (orig && orig.user_kendala) || item.kendala || "-";
+                    
+                    const tCell = document.getElementById(`t_${item.no}`);
+                    if (tCell) tCell.innerText = item.tindak || "-";
                 }
             });
         }
 
-        document.querySelectorAll('.italic.text-gray-400')
-            .forEach(el => el.classList.remove('italic', 'text-gray-400'));
+        // --- FINISHING ---
+        document.querySelectorAll('.italic.text-gray-400').forEach(el => el.classList.remove('italic', 'text-gray-400'));
+        alert("✅ Laporan Berhasil Disusun!");
 
         setTimeout(() => {
-            applySmartBreak();
-         
+            if (typeof applySmartBreak === "function") applySmartBreak(); 
+            if (typeof splitBab1 === "function") splitBab1();      
         }, 800);
 
-        alert("✅ Laporan Berhasil Disusun!");
-        // Panggil fungsi pemecah halaman di sini
-        setTimeout(() => {
-            splitBab1(); 
-        }, 500); // Beri jeda sedikit agar browser selesai merender teks dari AI
-
     } catch (e) {
-    console.error("Detail Error:", e);
-
-    if (e.name === "AbortError") {
-        alert("⏱️ Request terlalu lama (timeout). Coba lagi atau perbesar server response time.");
-    } else {
+        console.error("Detail Error:", e);
         alert("Kesalahan: " + e.message);
-    }
-
     } finally {
         if (btn) {
             btn.innerHTML = "🚀 GENERATE AI - NARASI LAPORAN";
@@ -913,55 +992,7 @@ const obj = JSON.parse(jsonMatch[0]);
         }
     }
 }
-// --- FUNGSI SMART BREAK (KEMBALI) ---
-function applySmartBreak() {
-    console.log("Menjalankan Smart Break...");
-    const pages = document.querySelectorAll('.page.auto-height');
-    
-    // Batas tinggi konten dalam pixel (330mm dikurangi padding atas-bawah)
-    // Sekitar 1050px - 1100px untuk kertas F4/Legal
-    const maxHeight = 1080; 
 
-    pages.forEach(page => {
-        // Jika konten di dalam halaman melebihi batas tinggi
-        if (page.offsetHeight > maxHeight) {
-            page.style.height = "auto";
-            page.style.minHeight = "330mm";
-            
-            // Khusus untuk tabel di Bab II
-            const tables = page.querySelectorAll('table');
-            tables.forEach(table => {
-                table.style.pageBreakInside = "auto";
-                const rows = table.querySelectorAll('tr');
-                rows.forEach(row => {
-                    row.style.pageBreakInside = "avoid";
-                    row.style.pageBreakAfter = "auto";
-                });
-            });
-            
-            console.log("Halaman meluap, Smart Break diterapkan.");
-        }
-    });
-}
-
-// Tambahkan juga fungsi pendukung untuk memastikan margin saat print
-function fixPrintMargins() {
-    const style = document.createElement('style');
-    style.innerHTML = `
-        @media print {
-            .page {
-                height: auto !important;
-                min-height: 330mm !important;
-                padding-bottom: 25mm !important;
-                page-break-after: always !important;
-            }
-            table { page-break-inside: auto !important; }
-            tr { page-break-inside: avoid !important; page-break-after: auto !important; }
-            thead { display: table-header-group !important; }
-        }
-    `;
-    document.head.appendChild(style);
-}
   </script>
 </body>
 </html>
