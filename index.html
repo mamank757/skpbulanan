@@ -697,7 +697,7 @@ document.getElementById('out_nama_cover').innerText = val('in_nama') || '-';
             });
         }
     }
-
+updateTable();
     // ✅ SET DEFAULT HANYA JIKA KOSONG
     if (!document.getElementById('in_tanggal').value) {
         document.getElementById('in_tanggal').value = new Date().toISOString().split('T')[0];
@@ -732,16 +732,30 @@ document.getElementById('out_nama_cover').innerText = val('in_nama') || '-';
     }
 
     function updateTable() {
-        const tb = document.getElementById('out_table_body');
-        tb.innerHTML = "";
-        let c = 1;
-        daftarKomponen.forEach((k, i) => {
-            const no = i + 1;
-            if(document.getElementById(`chk_${no}`).checked) {
-                tb.innerHTML += `<tr><td align="center">${c++}</td><td class="font-bold">${k}</td><td id="r_${no}">...</td><td id="k_${no}" align="center">-</td><td id="t_${no}" align="center">-</td></tr>`;
-            }
-        });
-    }
+    const tb = document.getElementById('out_table_body');
+    if (!tb) return; // Keamanan agar tidak error
+    
+    tb.innerHTML = "";
+    let c = 1;
+    
+    daftarKomponen.forEach((k, i) => {
+        const no = i + 1;
+        const chk = document.getElementById(`chk_${no}`);
+        if (chk && chk.checked) {
+            tb.innerHTML += `
+                <tr>
+                    <td align="center">${c++}</td>
+                    <td class="font-bold">${k}</td>
+                    <td id="r_${no}">Menunggu AI...</td>
+                    <td id="k_${no}" align="center">-</td>
+                    <td id="t_${no}" align="center">-</td>
+                </tr>`;
+        }
+    });
+    
+    // PENTING: Panggil sync() agar status centang tersimpan ke localStorage
+    if (typeof sync === "function") sync(); 
+}
 
     function closeWarning() {
         document.getElementById('browser-warning').style.display = 'none';
