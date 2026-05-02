@@ -606,19 +606,21 @@ if (isVisible) {
 }
 
     function handleTTD(input) {
-        const img1 = document.getElementById('out_ttd_img1');
-        const img2 = document.getElementById('out_ttd_img2');
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                img1.src = e.target.result;
-                img2.src = e.target.result;
-                img1.classList.remove('hidden');
-                img2.classList.remove('hidden');
-            };
-            reader.readAsDataURL(input.files[0]);
-        }
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            // Update semua ID gambar TTD yang ada di HTML
+            ['out_ttd_img1', 'out_ttd_img2'].forEach(id => {
+                const img = document.getElementById(id);
+                if(img) {
+                    img.src = e.target.result;
+                    img.classList.remove('hidden');
+                }
+            });
+        };
+        reader.readAsDataURL(input.files[0]);
     }
+}
 
     function toggle(no) {
         const is = document.getElementById(`chk_${no}`).checked;
@@ -781,11 +783,11 @@ FORMAT OUTPUT:
             throw new Error(result.message || "Gagal generate AI");
         }
 
-        let rawContent = result.text;
+       // Mengambil teks hanya di dalam kurung kurawal agar karakter sampah hilang
+const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+if (!jsonMatch) throw new Error("Format AI tidak valid. Coba klik Generate lagi.");
 
-        rawContent = rawContent.replace(/```json/g, "").replace(/```/g, "").trim();
-
-        const obj = JSON.parse(rawContent);
+const obj = JSON.parse(jsonMatch[0]);
 
         const fields = ['kp', 'latar', 'tugas', 'tujuan', 'kesimp'];
         const ids = ['out_kp', 'out_latar', 'out_tugas_pokok', 'out_tujuan', 'out_kesimp'];
@@ -847,4 +849,3 @@ FORMAT OUTPUT:
   </script>
 </body>
 </html>
-
