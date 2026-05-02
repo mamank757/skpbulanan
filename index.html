@@ -312,7 +312,7 @@
                 <div class="grid grid-cols-3"><span>BPP WILAYAH</span><span class="col-span-2">: <span id="out_bpp_cover">-</span></span></div>
             </div>
         </div>
-        <div class="font-bold mt-10"><p>KEMENTERIAN PERTANIAN</p><p>BADAN PENYULUHAN DAN PENGEMBANGAN SDM PERTANIAN</p><p>PUSAT PENYULUHAN PERTANIAN</p><p class="mt-4">2026</p></div>
+        <div class="font-bold mt-10"><p>KEMENTERIAN PERTANIAN</p><p>BADAN PENYULUHAN DAN PENGEMBANGAN SDM PERTANIAN</p><p>PUSAT PENYULUHAN PERTANIAN</p><p class="mt-4 out_tahun">-</p></div>
     </div>
 
      <div class="page">
@@ -361,9 +361,11 @@
         <div class="page-number">1</div>
     </div>
 
-    <div class="page auto-height">
+   <!-- Cari kode ini dan ganti -->
+<div class="page auto-height">
     <h2 class="font-bold text-lg mb-2 uppercase text-center">BAB II. PEMBAHASAN</h2>
-    <p class="font-bold mb-4">Rincian Capaian Kinerja Bulan <span id="out_bulan_2">JANUARI</span> 2026</p>
+    <p class="font-bold mb-4">Rincian Capaian Kinerja Bulan <span id="out_bulan_2">JANUARI</span> <span class="out_tahun">-</span></p>
+    ...
     
     <table>
         <thead>
@@ -489,6 +491,12 @@ if (isVisible) {
   function sync() {
     const val = (id) => document.getElementById(id).value;
 
+    // --- TAMBAHKAN LOGIKA TAHUN DI SINI ---
+    const tahunSekarang = new Date().getFullYear();
+    document.querySelectorAll('.out_tahun').forEach(el => {
+        el.innerText = tahunSekarang;
+    });
+
     // 1. Sinkronisasi Tampilan (Visual)
     document.getElementById('out_nama_cover').innerText = val('in_nama') || '-';
     document.getElementById('out_nip_cover').innerText = val('in_nip') || '-';
@@ -504,7 +512,7 @@ if (isVisible) {
 
     document.getElementById('out_nama_koor').innerText = val('in_nama_koor') || 'NAMA KOORDINATOR';
     document.getElementById('out_nip_koor').innerText = val('in_nip_koor') || '-';
-
+document.getElementById('out_nama_cover').innerText = val('in_nama') || '-';
     const tgl = formatTanggalIndo(val('in_tanggal'));
     const lok = val('in_bpp') || '...';
     document.getElementById('out_lokasi_tgl1').innerText = `${lok}, ${tgl}`;
