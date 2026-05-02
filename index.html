@@ -590,44 +590,51 @@ document.getElementById('out_nama_cover').innerText = val('in_nama') || '-';
         kegiatan: kegiatanData // Data ketikan item disimpan di sini
     }));
 }
- function splitBab1() {
-    // 1. Hapus halaman tambahan Bab I yang lama jika ada (reset sebelum hitung ulang)
+function splitBab1() {
+    // 1. Hapus halaman tambahan Bab I yang lama jika ada
     document.querySelectorAll('.page-extra-bab1').forEach(p => p.remove());
 
     const container = document.querySelector('.report-container');
     const bab1 = document.getElementById('bab1');
     if (!bab1) return;
 
-    // 2. Ambil semua elemen paragraf/judul di dalam Bab 1
+    // 2. Ambil elemen konten (H2, H3, dan DIV narasi)
+    // Filter agar nomor halaman tidak ikut diproses
     const elements = Array.from(bab1.children).filter(el => !el.classList.contains('page-number'));
     
-    // 3. Batas tinggi maksimal (sesuaikan jika teks masih menabrak footer)
-    const maxHeight = 950; 
-
+    const maxHeight = 950; // Batas tinggi maksimal konten per halaman
     let currentHeight = 0;
     let extraPage = null;
     let extraWrapper = null;
 
-    elements.forEach(el => {
+    elements.forEach((el, index) => {
+        // Hitung tinggi elemen saat ini
         currentHeight += el.offsetHeight;
 
-        // 4. Jika tinggi total elemen sudah lewat batas, pindahkan ke halaman baru
+        // 3. LOGIKA DETEKSI MELUBER
         if (currentHeight > maxHeight) {
             if (!extraPage) {
-                // Buat halaman baru (TIMPA bagian ini dengan kode yang ada style-nya)
+                // Buat halaman baru TANPA judul "(Lanjutan)" sesuai permintaan Abang
                 extraPage = document.createElement('div');
                 extraPage.className = "page auto-height page-extra-bab1";
                 extraPage.innerHTML = `
-                    <h2 class="font-bold text-lg mb-6 uppercase text-center">BAB I. PENDAHULUAN (Lanjutan)</h2>
                     <div class="content-wrapper" style="font-family: 'Times New Roman', serif; font-size: 11pt; text-align: justify;"></div>
                     <div class="page-number">1</div>
                 `;
                 
-                // Masukkan halaman baru tepat setelah Bab 1 asli
                 container.insertBefore(extraPage, bab1.nextSibling);
                 extraWrapper = extraPage.querySelector('.content-wrapper');
             }
-            // Pindahkan sisa paragraf ke halaman tambahan
+
+            // 4. LOGIKA AGAR JUDUL SUB-BAB IKUT (KEEP WITH NEXT)
+            // Jika elemen saat ini adalah narasi (DIV) dan elemen sebelumnya adalah judul (H3)
+            // Maka judulnya kita tarik juga ke halaman baru agar tidak sendirian di bawah
+            const prevEl = elements[index - 1];
+            if (el.tagName === 'DIV' && prevEl && prevEl.tagName === 'H3') {
+                extraWrapper.appendChild(prevEl);
+            }
+
+            // Masukkan elemen ke halaman tambahan
             extraWrapper.appendChild(el);
         }
     });
