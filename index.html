@@ -913,7 +913,55 @@ const obj = JSON.parse(jsonMatch[0]);
         }
     }
 }
+// --- FUNGSI SMART BREAK (KEMBALI) ---
+function applySmartBreak() {
+    console.log("Menjalankan Smart Break...");
+    const pages = document.querySelectorAll('.page.auto-height');
+    
+    // Batas tinggi konten dalam pixel (330mm dikurangi padding atas-bawah)
+    // Sekitar 1050px - 1100px untuk kertas F4/Legal
+    const maxHeight = 1080; 
 
+    pages.forEach(page => {
+        // Jika konten di dalam halaman melebihi batas tinggi
+        if (page.offsetHeight > maxHeight) {
+            page.style.height = "auto";
+            page.style.minHeight = "330mm";
+            
+            // Khusus untuk tabel di Bab II
+            const tables = page.querySelectorAll('table');
+            tables.forEach(table => {
+                table.style.pageBreakInside = "auto";
+                const rows = table.querySelectorAll('tr');
+                rows.forEach(row => {
+                    row.style.pageBreakInside = "avoid";
+                    row.style.pageBreakAfter = "auto";
+                });
+            });
+            
+            console.log("Halaman meluap, Smart Break diterapkan.");
+        }
+    });
+}
+
+// Tambahkan juga fungsi pendukung untuk memastikan margin saat print
+function fixPrintMargins() {
+    const style = document.createElement('style');
+    style.innerHTML = `
+        @media print {
+            .page {
+                height: auto !important;
+                min-height: 330mm !important;
+                padding-bottom: 25mm !important;
+                page-break-after: always !important;
+            }
+            table { page-break-inside: auto !important; }
+            tr { page-break-inside: avoid !important; page-break-after: auto !important; }
+            thead { display: table-header-group !important; }
+        }
+    `;
+    document.head.appendChild(style);
+}
   </script>
 </body>
 </html>
